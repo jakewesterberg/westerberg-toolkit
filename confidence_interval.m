@@ -20,12 +20,12 @@ if numel(size(data_in))==3
 else
 
     if strcmp('mean', methd)
-        mean_out = nanmean(data_in,2);
+        mean_out = nanmean(data_in);
     else
-        mean_out = nanmedian(data_in,2);
+        mean_out = nanmedian(data_in);
     end
-    upper_out = mean_out + lvl*(nanstd(data_in,[],2) ./ (sqrt(size(data_in,2))));
-    lower_out = mean_out - lvl*(nanstd(data_in,[],2) ./ (sqrt(size(data_in,2))));
+    upper_out = mean_out + lvl*(nanstd(data_in) ./ (sqrt(size(data_in,1))));
+    lower_out = mean_out - lvl*(nanstd(data_in) ./ (sqrt(size(data_in,1))));
 
 end
 
