@@ -1,4 +1,4 @@
-function dir_cont = find_in_dir(dir_in,search_exp,omit_terms)
+function dir_cont = find_in_dir(dir_in, search_exp)
 
 dir_str = dir(dir_in);
 dir_cont = {};
