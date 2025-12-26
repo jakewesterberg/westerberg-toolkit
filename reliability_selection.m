@@ -2,16 +2,29 @@ function [output_targ_choice_nrs, output_ndist_choice_nrs, output_sdist_choice_n
     output_crit_percent_nrs, output_hit_crit_nrs, summary] = ...
     reliability_selection(dat_in1, dat_in2, dat_in3, samples_in, counts_in, boots_in)
 
+set_size = 6;
+save_pops = true;
+
 summary.samples = samples_in;
 summary.counts = counts_in;
 summary.boots = boots_in;
 summary.crit_percent = 95;
 summary.smooth_win = 2;
 
+max_counts = max(counts_in);
+num_counts = numel(counts_in);
+
+targ_chosen = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
+sdist_chosen = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
+ndist_chosen = zeros(boots_in*(set_size-2), size(dat_in1, 2), num_counts, 'logical');
+
+targ_pops = zeros(boots_in, size(dat_in1, 2), num_counts, max_counts, 'uint16');
+sdist_pops = zeros(boots_in, size(dat_in1, 2), num_counts, max_counts, 'uint16');
+ndist_pops = zeros(boots_in*(set_size-2), size(dat_in1, 2), num_counts, max_counts, 'uint16');
+
 boots_ref = summary.boots;
 counts_ref = summary.counts;
 crit_ref = summary.crit_percent;
-set_size = 6;
 smooth_win = summary.smooth_win;
 
 output_targ_choice_nrs = nan(numel(counts_ref), size(dat_in1, 2));
@@ -36,11 +49,14 @@ for SAMPLE = summary.samples
 
     clear targ_nnan ndist_nnan sdist_nnan
 
-    for counts = 1 : numel(counts_ref)
+    for counts = 1 : num_counts
 
         targ_choice_nrs = 0;
         ndist_choice_nrs = 0;
         sdist_choice_nrs = 0;
+        cur_count = counts_ref(counts);
+
+        stim_pops = zeros(set_size, cur_count, boots_ref);
 
         parfor boots = 1 : boots_ref
 
@@ -52,19 +68,19 @@ for SAMPLE = summary.samples
                 while not_full
                     if stim_row == 1
                         rsamps_nrs(stim_row, :) = randsample(numel(reli_dat_pop_targ), ...
-                            counts_ref(counts), false);
+                            cur_count, false);
                         if sum(isnan(reli_dat_pop_targ(rsamps_nrs(stim_row,:)))) == 0
                             not_full = false;
                         end
                     elseif stim_row == 2
                         rsamps_nrs(stim_row, :) = randsample(numel(reli_dat_pop_sdist), ...
-                            counts_ref(counts), false);
+                            cur_count, false);
                         if sum(isnan(reli_dat_pop_sdist(rsamps_nrs(stim_row,:)))) == 0
                             not_full = false;
                         end
                     else
                         rsamps_nrs(stim_row, :) = randsample(numel(reli_dat_pop_ndist), ...
-                            counts_ref(counts), false);
+                            cur_count, false);
                         if sum(isnan(reli_dat_pop_ndist(rsamps_nrs(stim_row,:)))) == 0
                             not_full = false;
                         end
@@ -76,6 +92,9 @@ for SAMPLE = summary.samples
             end
 
             if ~isempty(rsamps_nrs)
+
+                stim_pops(:,:,boots) = rsamps_nrs;
+
                 stim_sum_nrs = nan(1,set_size);
                 for stim_itt = 1 : set_size
                     if stim_itt == 1
@@ -92,11 +111,31 @@ for SAMPLE = summary.samples
             
                 [~, maxind] =  max(stim_sum_nrs);
 
-                if maxind == 1; targ_choice_nrs = targ_choice_nrs + 1;
-                elseif maxind == 2; sdist_choice_nrs = sdist_choice_nrs + 1;
-                else; ndist_choice_nrs = ndist_choice_nrs + 1; end
+                if maxind == 1
+                    targ_choice_nrs = targ_choice_nrs + 1;
+                    targ_chosen(boots, SAMPLE, counts) = 1;
+                elseif maxind == 2
+                    sdist_choice_nrs = sdist_choice_nrs + 1;
+                    sdist_chosen(boots, SAMPLE, counts) = 1;
+                else
+                    ndist_choice_nrs = ndist_choice_nrs + 1; 
+                    for ndi = 1 : set_size - 2
+                        if maxind-2 == ndi
+                            ndist_chosen(boots*(set_size-2)-(set_size-2)+ndi, SAMPLE, counts);
+                        end
+                    end
+                end
+
             end
         end
+
+        for boots = 1:boots_ref
+            targ_pops(boots, SAMPLE, counts, 1:cur_count) = stim_pops(1, :, boots);
+            sdist_pops(boots, SAMPLE, counts, 1:cur_count) = stim_pops(2, :, boots);
+            ndist_pops(boots*(set_size-2)-(set_size-3):boots*(set_size-2), SAMPLE, counts, 1:cur_count) = ...
+                stim_pops(3:set_size, :, boots);
+        end
+        clear stim_pops
 
         if targ_choice_nrs | sdist_choice_nrs | ndist_choice_nrs
 
@@ -134,4 +173,13 @@ for SAMPLE = summary.samples
 
         end
     end
+end
+
+summary.targ_pops = targ_pops; clear targ_pops;
+summary.sdist_pops = sdist_pops; clear sdist_pops;
+summary.ndist_pops = ndist_pops; clear ndist_pops;
+summary.targ_chosen = targ_chosen; clear targ_chosen;
+summary.sdist_chosen = sdist_chosen; clear sdist_chosen;
+summary.ndist_chosen = ndist_chosen; clear ndist_chosen;
+
 end
