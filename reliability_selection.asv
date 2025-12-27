@@ -16,7 +16,7 @@ num_counts = numel(counts_in);
 
 targ_chosen = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
 sdist_chosen = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
-ndist_chosen = zeros(boots_in*4, size(dat_in1, 2), num_counts, 'logical');;
+ndist_chosen = zeros(boots_in*(set_size-2), size(dat_in1, 2), num_counts, 'logical');
 
 targ_pops = zeros(boots_in, size(dat_in1, 2), num_counts, max_counts, 'uint16');
 sdist_pops = zeros(boots_in, size(dat_in1, 2), num_counts, max_counts, 'uint16');
@@ -34,6 +34,8 @@ output_crit_percent_nrs = nan(numel(counts_ref), size(dat_in1, 2));
 output_hit_crit_nrs = nan(numel(counts_ref), size(dat_in1, 2));
 
 for SAMPLE = summary.samples
+
+    disp(['working on SAMPLE ' num2str(SAMPLE)])
 
     reli_dat_pop_targ = nanmean(dat_in1(:,SAMPLE-smooth_win:SAMPLE+smooth_win),2);
     reli_dat_pop_ndist = nanmean(dat_in2(:,SAMPLE-smooth_win:SAMPLE+smooth_win),2);
@@ -57,6 +59,11 @@ for SAMPLE = summary.samples
         cur_count = counts_ref(counts);
 
         stim_pops = zeros(set_size, cur_count, boots_ref);
+
+        ndist_chosen1 = zeros(boots_in, 1, 'logical');
+        ndist_chosen2 = zeros(boots_in, 1, 'logical');
+        ndist_chosen3 = zeros(boots_in, 1, 'logical');
+        ndist_chosen4 = zeros(boots_in, 1, 'logical');
 
         parfor boots = 1 : boots_ref
 
@@ -134,7 +141,8 @@ for SAMPLE = summary.samples
             end
         end
 
-        ndist_chosen = [ndist_chosen1; ndist_chosen2; ndist_chosen3; ndist_chosen4];
+        ndist_chosen_temp = [ndist_chosen1; ndist_chosen2; ndist_chosen3; ndist_chosen4];
+        ndist_chosen(:,:,counts) = ndist_chosen_temp; clear ndist_chosen_temp;
 
         for boots = 1:boots_ref
             targ_pops(boots, SAMPLE, counts, 1:cur_count) = stim_pops(1, :, boots);

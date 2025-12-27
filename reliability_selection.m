@@ -60,10 +60,10 @@ for SAMPLE = summary.samples
 
         stim_pops = zeros(set_size, cur_count, boots_ref);
 
-        ndist_chosen1 = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
-        ndist_chosen2 = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
-        ndist_chosen3 = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
-        ndist_chosen4 = zeros(boots_in, size(dat_in1, 2), num_counts, 'logical');
+        ndist_chosen1 = zeros(boots_in, 1, 'logical');
+        ndist_chosen2 = zeros(boots_in, 1, 'logical');
+        ndist_chosen3 = zeros(boots_in, 1, 'logical');
+        ndist_chosen4 = zeros(boots_in, 1, 'logical');
 
         parfor boots = 1 : boots_ref
 
@@ -142,7 +142,7 @@ for SAMPLE = summary.samples
         end
 
         ndist_chosen_temp = [ndist_chosen1; ndist_chosen2; ndist_chosen3; ndist_chosen4];
-        ndist_chosen(:,:,counts) = ndist_chosen_temp; clear ndist_chosen_temp;
+        ndist_chosen(:,SAMPLE,counts) = ndist_chosen_temp; clear ndist_chosen_temp;
 
         for boots = 1:boots_ref
             targ_pops(boots, SAMPLE, counts, 1:cur_count) = stim_pops(1, :, boots);
