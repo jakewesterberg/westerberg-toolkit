@@ -126,16 +126,16 @@ for SAMPLE = summary.samples
                     sdist_chosen(boots, SAMPLE, counts) = 1;
                 elseif maxind == 3
                     ndist_choice_nrs = ndist_choice_nrs + 1;
-                    ndist_chosen1(boots, SAMPLE, counts) =1;
+                    ndist_chosen1(boots) =1;
                 elseif maxind == 4
                     ndist_choice_nrs = ndist_choice_nrs + 1;
-                    ndist_chosen2(boots, SAMPLE, counts) =1;
+                    ndist_chosen2(boots) =1;
                 elseif maxind == 5
                     ndist_choice_nrs = ndist_choice_nrs + 1;
-                    ndist_chosen3(boots, SAMPLE, counts) =1;
+                    ndist_chosen3(boots) =1;
                 elseif maxind == 6
                     ndist_choice_nrs = ndist_choice_nrs + 1;
-                    ndist_chosen4(boots, SAMPLE, counts) =1;
+                    ndist_chosen4(boots) =1;
                 end
 
             end
