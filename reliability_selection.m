@@ -145,16 +145,11 @@ for SAMPLE = summary.samples
         ndist_chosen(:,SAMPLE,counts) = ndist_chosen_temp; clear ndist_chosen_temp;
 
         for boots = 1:boots_ref
+            ndist_vals = [boots+boots_ref boots+boots_ref*2 boots+boots_ref*3 boots+boots_ref*4];
             targ_pops(boots, SAMPLE, counts, 1:cur_count) = stim_pops(1, :, boots);
             sdist_pops(boots, SAMPLE, counts, 1:cur_count) = stim_pops(2, :, boots);
-            ndist_pops(boots+boots_ref*1, SAMPLE, counts, 1:cur_count) = ...
-                stim_pops(3, :, boots);
-            ndist_pops(boots+boots_ref*2, SAMPLE, counts, 1:cur_count) = ...
-                stim_pops(4, :, boots);
-            ndist_pops(boots+boots_ref*3, SAMPLE, counts, 1:cur_count) = ...
-                stim_pops(5, :, boots);
-            ndist_pops(boots+boots_ref*4, SAMPLE, counts, 1:cur_count) = ...
-                stim_pops(6, :, boots);
+            ndist_pops(ndist_vals, SAMPLE, counts, 1:cur_count) = ...
+                stim_pops(3:6, :, boots);
         end
         clear stim_pops
 
