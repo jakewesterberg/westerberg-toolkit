@@ -1,72 +1,69 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
-Created on Fri May 18 11:29:45 2017
+Created on Thu Oct 12 11:12:42 2023
 
-@author: Xiaoxuan Jia
+@author: jakew
 """
 
+import ccg_jxx
 import numpy as np
-import scipy
-import pandas as pd
-import seaborn as sns 
 import matplotlib.pyplot as plt
-
+import pickle
 
 from sklearn.preprocessing import StandardScaler
 from scipy.cluster.vq import kmeans2
-from scipy.cluster.vq import whiten
-from sklearn.metrics.pairwise import pairwise_distances
-
-from sklearn import datasets
-from matplotlib import cm
 
 import scipy.cluster.hierarchy as sch
-from scipy.spatial.distance import pdist
-
-from sklearn.preprocessing import StandardScaler
-
-#import tsne_adapted
 
 import pca_basic
 
-#import similarity_utils as simu
-
-def fancy_dendrogram(*args, **kwargs):
-    """Visulize dendrogram distance in plot"""
-    max_d = kwargs.pop('max_d', None)
-    if max_d and 'color_threshold' not in kwargs:
-        kwargs['color_threshold'] = max_d
-    annotate_above = kwargs.pop('annotate_above', 0)
-
-    ddata = dendrogram(*args, **kwargs)
-
-    if not kwargs.get('no_plot', False):
-        plt.title('Hierarchical Clustering Dendrogram (truncated)', fontsize=16)
-        plt.xlabel('sample index or (cluster size)', fontsize=16)
-        plt.ylabel('distance', fontsize=16)
-        for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
-            x = 0.5 * sum(i[1:3])
-            y = d[1]
-            if y > annotate_above:
-                plt.plot(x, y, 'o', c=c)
-                plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
-                             textcoords='offset points',
-                             va='top', ha='center')
-        if max_d:
-            plt.axhline(y=max_d, c='k')
-    return ddata
-
-#def tsne(X):
-#    perplexity=30.0
-#    Y, Error = tsne_adapted.tsne(Z_n, 2, 50, perplexity)
-#    return Y
-#
-#def tsne_plot(Y):
-#    plt.scatter(Y[:,0],Y[:,1])
+def ccgs(spikes_file, FR_file):
+    spikes = np.load(spikes_file)
+    FR = np.load(FR_file)
+    ccgjitter = ccg_jxx.get_ccgjitter(spikes, FR)
+    ccgjitter = ccgjitter.real
+    ccgjitter = np.squeeze(ccgjitter[:,:,0])
+    
+    n_good_units = np.sum(FR > 2)
+    t_range = range(399,599)
+    
+    temp_ccg = np.zeros((n_good_units, n_good_units, 200))
+    ctr0 = 0
+    ctr1 = 0
+    ctr2 = 0
+    while True:
+        if ctr1 > ctr2:
+            temp_ccg[ctr2, ctr1, :] = ccgjitter[ctr0, t_range] 
+            ctr1 += 1
+            ctr0 += 1
+            if ctr1 > n_good_units-1:
+                ctr2 += 1
+                ctr1 = ctr2
+        else:
+            ctr1 +=1
+        
+        if ctr0 > np.size(ccgjitter, axis=0)-1:
+            break
+            
+        
+    adj_matrix =  np.mean(temp_ccg[:,:,100:113], axis=2) - np.mean(temp_ccg[:,:,87:100], axis=2)
+    adj_matrix = adj_matrix + -1*adj_matrix.T - np.diag(np.diag(adj_matrix))
+    
+    ccgjitter = temp_ccg    
+    
+    np.save(FR_file[:-6] + "ccgjitter.npy", ccgjitter)
+    np.save(FR_file[:-6] + "adjacency_matrix.npy", adj_matrix)
+    
+    # plt.figure(figsize=(5,4))
+    # plt.imshow(adj_matrix, vmax=0.000002, vmin=-0.000002, cmap='bwr')
+    # plt.colorbar()
+    # plt.xlabel('To')
+    # plt.ylabel('From')
+    # plt.title('Diff of CCG (+/-13 ms) grating')
+    
+    return adj_matrix       
 
 class functional_clustering(object):
-    """
-    """
     def __init__(self, data, threshold=0.8):
         self.X = data
         self.n_neuron = np.shape(self.X)[0]
@@ -76,7 +73,7 @@ class functional_clustering(object):
     def normalize(self):
         # 1. normalization (var=1 in all dims)
         self.X_n = StandardScaler().fit_transform(self.X)
-
+        
     def pca(self, norm=True):
         if norm:
             self.Z, self.k = pca_basic.pca_basic(self.X_n, threshold=self.threshold)
@@ -84,9 +81,7 @@ class functional_clustering(object):
             self.Z, self.k = pca_basic.pca_basic(self.X, threshold=self.threshold)
 
     def probability_matrix(self, k, data=[], iter_n = 1000, boot_n = 100):
-        """Different initial value.
-        TODO: add subsampling
-        """
+
         if  len(data)==0:
             data = self.Z.T
 
@@ -112,7 +107,8 @@ class functional_clustering(object):
             #plt.figure()
             #plt.imshow(matrix/float(boot)-matrix_previous/float(boot-1))
             # compute distance between two adjacent similarity matrix
-            dist.append(np.linalg.norm(matrix/float(boot)-matrix_previous/float(boot-1)))
+            #dist.append(np.linalg.norm(matrix/float(boot)-matrix_previous/float(boot-1)))
+            dist.append(np.linalg.norm(matrix-matrix_previous))
         self.dist=np.array(dist)
         self.matrix=matrix/float(boot_n)
         return self.matrix
@@ -168,32 +164,13 @@ class functional_clustering(object):
         plt.colorbar(im, cax=axcolor)
 
         if len(figname)>0:
-            plt.savefig(figname)
-        
-
-    def plot_dendrogram(self, max_d):
-        # 5. Selecting a Distance Cut-Off aka Determining the Number of Clusters
-        # set cut-off to 50
-        max_d = max_d # max_d as in max_distance
-        plt.figure(figsize=(16,10))
-        fancy_dendrogram(
-            Lin,
-            truncate_mode='lastp',
-            p=100,
-            leaf_rotation=90.,
-            leaf_font_size=12.,
-            show_contracted=True,
-            annotate_above=10,
-            max_d=max_d,  # plot a horizontal cut-off line
-        )
-        #plt.savefig('/Users/xiaoxuanj/work/work_allen/DynamicBrain/figures/sessionB_ns_sg_matrix_cluster_dendrogram.pdf')
+            plt.savefig(figname) 
     
     def predict_cluster(self, **args):
         """
         predict number of clusters based on distance threshold or number of k.
         clusters start from 1
         """
-
         # 7. Retrieve the Clusters
         # 7.1 knowing max_d from dendrogram
         if 'max_d' in args.keys():
@@ -224,14 +201,8 @@ class functional_clustering(object):
         plt.legend(loc='upper left', numpoints=1, ncol=2, fontsize=10, bbox_to_anchor=(0, 0))
 
         #plt.savefig('/Users/xiaoxuanj/work/work_allen/DynamicBrain/figures/sessionB_ns_sg_matrix_cluster_colorplot.pdf')
-
-
-
-
-
-
-
-
-
-
-
+        
+    def save_class_file(self, filename):
+        with open(filename + '.pkl', 'wb') as f:
+            pickle.dump(self, f)
+        f.close()
